@@ -29,10 +29,12 @@ PYTHON_EXECS += ['/usr/bin/python2', '/usr/bin/python3']
 #------------------------------------------------------------------------------
 
 include_recipe 'apt::default'
+include_recipe 'poise-python::default'
+include_recipe 'cron::default'
 
 apt_packages  = ['python-dev', 'python-pip', 'python3-pip', 'gfortran', 'libatlas-dev']
 apt_packages += ['libatlas-base-dev', 'git', 'libcr-dev', 'mpich', 'mpich-doc', 'python3-venv']
-apt_packages += ['python-numpy', 'python-scipy', 'libfreetype6-dev', 'libfreetype6', 'pkg-config']
+apt_packages += ['python-numpy', 'python-scipy', 'libfreetype6-dev', 'libfreetype6', 'pkg-config', 'vim']
 
 for package in apt_packages
     apt_package package
@@ -62,18 +64,45 @@ git HOME_DIR + '/restudToolbox/package' do
     repository 'https://github.com/restudToolbox/package.git'
 end
 
-# Install RESPY for all the PYTHON packages.
+# Intall the virtualenvwrapper.
+python_package 'virtualenvwrapper' do
+    python '/usr/bin/python2'
+end
+
+cookbook_file  HOME_DIR + '/.profile' do
+  source 'profile.cfg'
+  owner USER
+  group USER
+  mode '0755'
+  action :create
+end
+
+
+# Install RESPY requirements and PYTEST for all environments.
 for python_exec in PYTHON_EXECS
-    # TODO: Updated RESPY installation. here
     for package in ['pytest']
         python_package package do
             python python_exec
         end
     end
+
+    pip_requirements  HOME_DIR + '/restudToolbox/package/requirements.txt' do
+        python python_exec
+    end
+
+end
+
+# Set up the CRON job that executes the test battery at midnight, if resources
+# are available.
+cmd = ENV_DIR + 'restudToolbox2/bin/python ' + HOME_DIR + '/restudToolbox/package/tools/ec2/cron_testing.py'
+cron_d 'daily-test-run' do
+  command cmd
+  predefined_value @daily
+  user    USER
 end
 
 # Ensure correct ownership of the resources in the HOME directory.
 execute 'home_permissions' do
-  command 'chown vagrant:vagrant -R ' + HOME_DIR
+  command 'chown ' + USER + ':' +  USER + ' -R ' + HOME_DIR
   action :nothing
 end

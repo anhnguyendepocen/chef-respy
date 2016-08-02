@@ -8,3 +8,4 @@ version          '0.1.0'
 
 depends 'apt', '~> 4.0.1'
 depends 'poise-python', '~> 1.4.0'
+depends 'cron', '~> 1.7.6'
